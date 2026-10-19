@@ -1,0 +1,71 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { daysUntil, nextRentDue, summarize, type ChargeRow, type LeaseSummary } from "@/lib/billing";
+import type { Lease } from "@/lib/types";
+import { todayWIB } from "@/lib/utils";
+
+export type LeaseOverview = {
+  lease: Lease;
+  tenantName: string;
+  tenantPhone: string;
+  roomName: string;
+  unitName: string;
+  summary: LeaseSummary;
+  pendingAmount: number;
+  pendingCount: number;
+  nextDue: string | null;
+  endsInDays: number;
+};
+
+type LeaseJoin = Lease & {
+  tenants: { full_name: string; phone: string } | null;
+  rooms: { name: string; units: { name: string } | null } | null;
+};
+
+/** Ringkasan semua sewa aktif: tunggakan, pembayaran menunggu, jatuh tempo, dst. */
+export async function getActiveOverview(supabase: SupabaseClient): Promise<LeaseOverview[]> {
+  const today = todayWIB();
+
+  const { data: leases } = await supabase
+    .from("leases")
+    .select("*, tenants(full_name, phone), rooms(name, units(name))")
+    .eq("status", "active");
+
+  const rows = (leases ?? []) as LeaseJoin[];
+  if (rows.length === 0) return [];
+  const ids = rows.map((l) => l.id);
+
+  const [chargesRes, paymentsRes] = await Promise.all([
+    supabase.from("charges").select("*").in("lease_id", ids),
+    supabase.from("payments").select("lease_id, amount, status").in("lease_id", ids).in("status", ["approved", "pending"]),
+  ]);
+
+  const charges = (chargesRes.data ?? []) as ChargeRow[];
+  const payments = (paymentsRes.data ?? []) as { lease_id: string; amount: number; status: string }[];
+
+  return rows
+    .map((l) => {
+      const myCharges = charges.filter((c) => c.lease_id === l.id);
+      const mine = payments.filter((p) => p.lease_id === l.id);
+      const paid = mine.filter((p) => p.status === "approved").reduce((s, p) => s + p.amount, 0);
+      const pending = mine.filter((p) => p.status === "pending");
+      return {
+        lease: l,
+        tenantName: l.tenants?.full_name ?? "(tanpa nama)",
+        tenantPhone: l.tenants?.phone ?? "",
+        roomName: l.rooms?.name ?? "?",
+        unitName: l.rooms?.units?.name ?? "?",
+        summary: summarize(myCharges, paid, today),
+        pendingAmount: pending.reduce((s, p) => s + p.amount, 0),
+        pendingCount: pending.length,
+        nextDue: nextRentDue(l.start_date, l.duration_months, today),
+        endsInDays: daysUntil(l.end_date, today),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.summary.daysOverdue - a.summary.daysOverdue ||
+        a.unitName.localeCompare(b.unitName, "id") ||
+        a.roomName.localeCompare(b.roomName, "id", { numeric: true }),
+    );
+}

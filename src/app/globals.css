@@ -1,0 +1,212 @@
+@import "tailwindcss";
+
+/*
+  Palet diambil dari dunia kos: cat dinding hijau pandan, kuning kunyit,
+  putih kapur, dan plat nomor di pintu kamar (motif utama landing page).
+*/
+@theme {
+  --color-ink: #17352b;
+  --color-pandan: #2f6b4f;
+  --color-pandan-dark: #24533d;
+  --color-lumut: #e3ece1;
+  --color-kunyit: #f2b632;
+  --color-kunyit-dark: #dca21f;
+  --color-kapur: #f4f5ef;
+  --color-batu: #d9dfd4;
+  --color-abu: #5d6b63;
+  --color-bata: #b4472f;
+  --color-bata-soft: #f6e3dd;
+
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--color-kapur);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    line-height: 1.12;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-kunyit);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0 1.25rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-align: center;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--color-pandan);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-pandan-dark);
+  }
+  .btn-wa {
+    background: var(--color-kunyit);
+    color: var(--color-ink);
+  }
+  .btn-wa:hover:not(:disabled) {
+    background: var(--color-kunyit-dark);
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--color-batu);
+    color: var(--color-ink);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--color-pandan);
+  }
+  .btn-danger {
+    background: transparent;
+    border-color: var(--color-bata);
+    color: var(--color-bata);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--color-bata-soft);
+  }
+  .btn-sm {
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 0.6rem;
+  }
+
+  .field {
+    display: block;
+  }
+  .field > span {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .input {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.6rem 0.85rem;
+    border: 2px solid var(--color-batu);
+    border-radius: 0.75rem;
+    background: #fff;
+    font-size: 1rem; /* 16px: mencegah zoom otomatis di iOS */
+    color: var(--color-ink);
+  }
+  .input:focus {
+    border-color: var(--color-pandan);
+    outline: none;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .badge-ok {
+    background: var(--color-lumut);
+    color: var(--color-pandan-dark);
+  }
+  .badge-warn {
+    background: #fbefc9;
+    color: #7a5600;
+  }
+  .badge-bad {
+    background: var(--color-bata-soft);
+    color: var(--color-bata);
+  }
+  .badge-muted {
+    background: #e9ece6;
+    color: var(--color-abu);
+  }
+
+  /* Plat nomor kamar, seperti yang tertempel di pintu kos */
+  .plate {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 4.25rem;
+    padding: 0.45rem 0.7rem 0.4rem;
+    border: 2px solid var(--color-ink);
+    border-radius: 0.5rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    line-height: 1.1;
+    text-decoration: none;
+    position: relative;
+  }
+  .plate small {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.68rem;
+    letter-spacing: 0.01em;
+    margin-top: 0.15rem;
+  }
+  .plate-free {
+    background: var(--color-pandan);
+    border-color: var(--color-pandan);
+    color: #fff;
+  }
+  a.plate-free:hover {
+    background: var(--color-pandan-dark);
+  }
+  .plate-taken {
+    background: transparent;
+    border-color: var(--color-batu);
+    color: #8a968f;
+    border-style: dashed;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--color-batu);
+    border-radius: 1rem;
+  }
+}
