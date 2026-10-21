@@ -15,6 +15,7 @@ const PHOTO_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "p
 /** Kembali ke halaman dengan pesan. Selalu dipanggil di luar try/catch (redirect melempar). */
 function go(path: string, kind: "ok" | "error", message: string): never {
   revalidatePath("/admin", "layout");
+  revalidatePath("/"); // landing (ISR 60 dtk) ikut berubah saat kamar/unit/sewa berubah
   redirect(`${path}?${kind}=${encodeURIComponent(message)}`);
 }
 
