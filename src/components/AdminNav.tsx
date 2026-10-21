@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,24 @@ const items = [
   { href: "/admin/verifikasi", label: "Verifikasi" },
   { href: "/admin/kamar", label: "Kamar" },
 ];
+
+/**
+ * Garis kecil di bawah menu yang sedang dibuka. Muncul hanya kalau pindah halaman butuh lebih dari
+ * ~150 ms, jadi pindah menu yang cepat tidak berkedip. Dipakai sebagai ganti loading.tsx: skeleton
+ * Suspense menahan konten asli minimal 300 ms walau datanya sudah datang dalam 60 ms.
+ */
+function PendingBar() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "absolute inset-x-6 bottom-1.5 h-0.5 rounded-full bg-pandan transition-opacity",
+        pending ? "animate-pulse opacity-100 delay-150" : "opacity-0 duration-100",
+      )}
+    />
+  );
+}
 
 export function AdminNav({ pendingCount }: { pendingCount: number }) {
   const pathname = usePathname();
@@ -36,6 +54,7 @@ export function AdminNav({ pendingCount }: { pendingCount: number }) {
                   )}
                 />
                 {item.label}
+                <PendingBar />
                 {item.href === "/admin/verifikasi" && pendingCount > 0 && (
                   <span className="absolute right-[18%] top-2 min-w-5 rounded-full bg-kunyit px-1.5 text-center text-xs font-bold text-ink">
                     {pendingCount}
