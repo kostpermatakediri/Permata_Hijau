@@ -59,7 +59,7 @@ Di detail penyewa, tombol "Kirim link bayar" membuka WhatsApp dengan pesan yang 
 
 - **Region harus dekat dengan database.** `vercel.json` mengunci function Vercel di `sin1` (Singapura). Pastikan region project Supabase sama (Supabase > Project Settings > General). Kalau Supabase ada di region lain, ganti nilai `regions` di `vercel.json` ke region Vercel terdekat dengannya. Function di benua lain membuat tiap query menambah 200 ms lebih.
 - Login dicek lokal lewat `getClaims()`, tanpa bolak-balik ke Supabase, selama project memakai JWT signing key asimetris (Supabase > Project Settings > JWT Keys). Kalau masih "legacy secret", tetap jalan tapi lebih lambat. Migrasikan ke signing key.
-- Halaman admin menjalankan cek admin dan query data bersamaan, dan memakai `loading.tsx` supaya pindah menu langsung menampilkan kerangka halaman.
+- Halaman admin menjalankan cek admin dan query data bersamaan (satu putaran ke Supabase). Sengaja **tanpa** `loading.tsx`: diukur, skeleton Suspense menahan konten asli minimal ~300 ms walau data sudah datang. Umpan balik klik berupa garis pending di menu bawah, dan halaman yang baru dibuka dipakai ulang 30 detik di sisi klien (`staleTimes`).
 - Landing page di-cache dan dibangun ulang tiap 60 detik, jadi tidak menyentuh database di tiap kunjungan.
 
 ## Alur pengembangan

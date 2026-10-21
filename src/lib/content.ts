@@ -1,4 +1,9 @@
-// Teks statis landing page. Sesuaikan dengan cara kerja pengelola yang sebenarnya.
+// Teks statis landing page.
+//
+// TODO(konfirmasi pemilik kos): `bookingSteps` masih teks generik, belum dikonfirmasi ke pemilik.
+// Tanyakan: apakah ada survei/lihat kamar dulu? Berapa DP atau pembayaran pertama, dan kapan dibayar?
+// Apakah ada syarat (KTP, kontrak minimal)? Jangan tambah janji (daftar tunggu, booking online, dsb.)
+// yang belum benar-benar dijalankan pengelola.
 
 export const bookingSteps = [
   {
