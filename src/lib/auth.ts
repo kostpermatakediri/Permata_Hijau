@@ -16,12 +16,17 @@ export const getSupabase = cache(async () => createClient());
 export const requireAdmin = cache(async () => {
   const supabase = await getSupabase();
 
-  const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims?.sub;
-  if (!userId) redirect("/login");
+  // Cek admin tidak menunggu getClaims(): policy RLS "admin baca diri sendiri" hanya mengembalikan
+  // baris milik pemegang token, jadi query tanpa filter user_id sudah pasti soal diri sendiri.
+  // Keduanya jalan bareng (satu putaran), lalu dicocokkan dengan klaim yang tanda tangannya terverifikasi.
+  const [{ data: claimsData }, { data: admin }] = await Promise.all([
+    supabase.auth.getClaims(),
+    supabase.from("admins").select("user_id").maybeSingle(),
+  ]);
 
-  const { data: admin } = await supabase.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
-  if (!admin) redirect("/login?error=" + encodeURIComponent("Akun ini belum terdaftar sebagai pengelola."));
+  const userId = claimsData?.claims?.sub;
+  if (!userId) redirect("/login");
+  if (admin?.user_id !== userId) redirect("/login?error=" + encodeURIComponent("Akun ini belum terdaftar sebagai pengelola."));
 
   return { supabase, userId };
 });
