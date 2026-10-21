@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource-variable/bricolage-grotesque/wght.css";
-import "@fontsource-variable/instrument-sans/wght.css";
+import "@fontsource-variable/inter/wght.css";
 import "./globals.css";
 import { config } from "@/lib/config";
 
