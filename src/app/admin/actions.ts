@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireAdmin } from "@/lib/auth";
 import { endDateFor } from "@/lib/billing";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -211,6 +212,8 @@ export async function reviewPayment(formData: FormData) {
 
 // ---------------------------------------------------------------- unit & kamar
 
+const MAX_UNIT_PHOTOS = 8;
+
 async function uploadUnitPhoto(unitId: string, file: File): Promise<string> {
   const ext = PHOTO_EXT[file.type];
   if (!ext) throw new Error("Foto harus berformat JPG, PNG, atau WebP.");
@@ -228,6 +231,11 @@ async function uploadUnitPhoto(unitId: string, file: File): Promise<string> {
 function photoFrom(formData: FormData): File | null {
   const f = formData.get("photo");
   return f instanceof File && f.size > 0 ? f : null;
+}
+
+/** Foto unit sekarang: galeri `photos`, dengan `photo_url` (foto pertama) tetap diisi untuk kompatibilitas. */
+async function setUnitPhotos(supabase: SupabaseClient, unitId: string, photos: string[]) {
+  return supabase.from("units").update({ photos, photo_url: photos[0] ?? null }).eq("id", unitId);
 }
 
 export async function createUnit(formData: FormData) {
@@ -251,17 +259,23 @@ export async function createUnit(formData: FormData) {
     } catch (e) {
       go(back, "error", `Unit tersimpan, tapi ${e instanceof Error ? e.message.toLowerCase() : "foto gagal diunggah"}`);
     }
-    await supabase.from("units").update({ photo_url: url }).eq("id", unit.id);
+    const { error: photoError } = await setUnitPhotos(supabase, unit.id, [url]);
+    if (photoError) go(back, "error", "Unit tersimpan, tapi foto gagal disimpan. Pastikan migrasi foto sudah dijalankan.");
   }
   go(back, "ok", `Unit ${name} ditambahkan.`);
 }
 
-export async function updateUnitPhoto(formData: FormData) {
+export async function addUnitPhoto(formData: FormData) {
   const { supabase } = await requireAdmin();
   const back = "/admin/kamar";
   const unitId = str(formData, "unit_id");
   const photo = photoFrom(formData);
   if (!photo) go(back, "error", "Pilih foto dulu.");
+
+  const { data: unit } = await supabase.from("units").select("photos, photo_url").eq("id", unitId).maybeSingle();
+  if (!unit) go(back, "error", "Unit tidak ditemukan.");
+  const current: string[] = unit.photos?.length ? unit.photos : unit.photo_url ? [unit.photo_url] : [];
+  if (current.length >= MAX_UNIT_PHOTOS) go(back, "error", `Maksimal ${MAX_UNIT_PHOTOS} foto per unit. Hapus satu dulu.`);
 
   let url: string;
   try {
@@ -269,9 +283,32 @@ export async function updateUnitPhoto(formData: FormData) {
   } catch (e) {
     go(back, "error", e instanceof Error ? e.message : "Gagal mengunggah foto.");
   }
-  const { error } = await supabase.from("units").update({ photo_url: url }).eq("id", unitId);
-  if (error) go(back, "error", "Gagal menyimpan foto.");
-  go(back, "ok", "Foto diperbarui.");
+  const { error } = await setUnitPhotos(supabase, unitId, [...current, url]);
+  if (error) go(back, "error", "Gagal menyimpan foto. Pastikan migrasi foto sudah dijalankan.");
+  go(back, "ok", "Foto ditambahkan.");
+}
+
+export async function removeUnitPhoto(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const back = "/admin/kamar";
+  const unitId = str(formData, "unit_id");
+  const url = str(formData, "url");
+
+  // URL harus benar-benar ada di galeri unit ini: jangan percaya input form.
+  const { data: unit } = await supabase.from("units").select("photos, photo_url").eq("id", unitId).maybeSingle();
+  const current: string[] = unit?.photos?.length ? unit.photos : unit?.photo_url ? [unit.photo_url] : [];
+  if (!unit || !current.includes(url)) go(back, "error", "Foto tidak ditemukan.");
+
+  const { error } = await setUnitPhotos(
+    supabase,
+    unitId,
+    current.filter((u) => u !== url),
+  );
+  if (error) go(back, "error", "Gagal menghapus foto.");
+
+  const objectPath = new URL(url).pathname.split("/unit-photos/")[1];
+  if (objectPath) await createAdminClient().storage.from("unit-photos").remove([decodeURIComponent(objectPath)]);
+  go(back, "ok", "Foto dihapus.");
 }
 
 export async function createRoom(formData: FormData) {

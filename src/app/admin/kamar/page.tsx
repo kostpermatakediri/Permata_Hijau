@@ -1,15 +1,17 @@
 import { Flash } from "@/components/Flash";
+import { PhotoInput } from "@/components/PhotoInput";
 import { SubmitButton } from "@/components/SubmitButton";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import type { Room, Unit } from "@/lib/types";
 import { formatRupiah } from "@/lib/utils";
-import { createRoom, createUnit, setRoomActive, updateUnitPhoto } from "../actions";
+import { addUnitPhoto, createRoom, createUnit, removeUnitPhoto, setRoomActive } from "../actions";
 
 export default async function RoomsPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const supabase = await getSupabase();
 
-  const [unitsRes, roomsRes, leasesRes] = await Promise.all([
+  const [, unitsRes, roomsRes, leasesRes] = await Promise.all([
+    requireAdmin(),
     supabase.from("units").select("*").order("sort_order").order("name"),
     supabase.from("rooms").select("*").order("name"),
     supabase.from("leases").select("room_id, tenants(full_name)").eq("status", "active"),
@@ -33,36 +35,51 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
       {units.length === 0 && <p className="mt-6 text-abu">Belum ada unit. Tambah unit pertama di bawah.</p>}
 
       {units.map((unit) => {
+        const photos = unit.photos?.length ? unit.photos : unit.photo_url ? [unit.photo_url] : [];
         const list = rooms.filter((r) => r.unit_id === unit.id).sort((a, b) => a.name.localeCompare(b.name, "id", { numeric: true }));
         return (
           <section key={unit.id} className="mt-8 border-t border-batu pt-6">
-            <div className="flex items-start gap-3">
-              {unit.photo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={unit.photo_url} alt="" className="size-20 shrink-0 rounded-xl object-cover" />
-              ) : (
-                <div className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-lumut font-display text-2xl font-bold text-pandan/40">
-                  {unit.name.slice(0, 1)}
-                </div>
-              )}
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold">{unit.name}</h2>
-                {unit.address && <p className="text-sm text-abu">{unit.address}</p>}
-              </div>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold">{unit.name}</h2>
+              {unit.address && <p className="text-sm text-abu">{unit.address}</p>}
             </div>
 
-            <details className="mt-3">
-              <summary className="cursor-pointer text-sm font-semibold underline underline-offset-4">
-                {unit.photo_url ? "Ganti foto unit" : "Tambah foto unit"}
-              </summary>
-              <form action={updateUnitPhoto} className="mt-3 space-y-3">
-                <input type="hidden" name="unit_id" value={unit.id} />
-                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required className="input" />
-                <SubmitButton pendingText="Mengunggah…" className="btn btn-primary btn-sm">
-                  Unggah foto
-                </SubmitButton>
-              </form>
-            </details>
+            {photos.length > 0 ? (
+              <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {photos.map((url, i) => (
+                  <li key={url} className="min-w-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Foto ${i + 1} ${unit.name}`} loading="lazy" className="aspect-square w-full rounded-lg object-cover" />
+                    <form action={removeUnitPhoto} className="mt-1">
+                      <input type="hidden" name="unit_id" value={unit.id} />
+                      <input type="hidden" name="url" value={url} />
+                      <SubmitButton
+                        className="w-full text-sm font-semibold text-bata underline underline-offset-4"
+                        pendingText="…"
+                        confirm="Hapus foto ini dari landing page?"
+                      >
+                        Hapus
+                      </SubmitButton>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-abu">Belum ada foto. Landing page paling menarik kalau ada foto kamar dan lingkungan.</p>
+            )}
+
+            {photos.length < 8 && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-sm font-semibold underline underline-offset-4">Tambah foto</summary>
+                <form action={addUnitPhoto} className="mt-3 space-y-3">
+                  <input type="hidden" name="unit_id" value={unit.id} />
+                  <PhotoInput required />
+                  <SubmitButton pendingText="Mengunggah…" className="btn btn-primary btn-sm">
+                    Unggah foto
+                  </SubmitButton>
+                </form>
+              </details>
+            )}
 
             <ul className="mt-4 divide-y divide-batu border-y border-batu">
               {list.length === 0 && <li className="py-3 text-abu">Belum ada kamar di unit ini.</li>}
@@ -134,8 +151,8 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
               <textarea name="description" rows={3} className="input" placeholder="Dekat kampus, parkir motor, ada dapur bersama" />
             </label>
             <label className="field">
-              <span>Foto (JPG/PNG/WebP, maks 3 MB)</span>
-              <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="input" />
+              <span>Foto pertama (opsional, foto lain bisa ditambah nanti)</span>
+              <PhotoInput />
             </label>
             <SubmitButton pendingText="Menyimpan…" className="btn btn-primary w-full">
               Simpan unit

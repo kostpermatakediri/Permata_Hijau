@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Flash } from "@/components/Flash";
 import { SubmitButton } from "@/components/SubmitButton";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import { formatRupiah, todayWIB } from "@/lib/utils";
 import { createLease } from "../../actions";
 
@@ -9,9 +9,10 @@ type RoomOption = { id: string; name: string; monthly_price: number; unit_id: st
 
 export default async function NewTenantPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const supabase = await getSupabase();
 
-  const [units, rooms, active] = await Promise.all([
+  const [, units, rooms, active] = await Promise.all([
+    requireAdmin(),
     supabase.from("units").select("id, name").order("sort_order").order("name"),
     supabase.from("rooms").select("id, name, monthly_price, unit_id").eq("is_active", true).order("name"),
     supabase.from("leases").select("room_id").eq("status", "active"),

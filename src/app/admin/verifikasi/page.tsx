@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Flash } from "@/components/Flash";
 import { SubmitButton } from "@/components/SubmitButton";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import { getActiveOverview } from "@/lib/overview";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Payment } from "@/lib/types";
@@ -18,9 +18,10 @@ type PendingRow = Payment & {
 
 export default async function VerificationPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const supabase = await getSupabase();
 
-  const [pendingRes, overview] = await Promise.all([
+  const [, pendingRes, overview] = await Promise.all([
+    requireAdmin(),
     supabase
       .from("payments")
       .select("*, leases(id, tenants(full_name), rooms(name, units(name)))")

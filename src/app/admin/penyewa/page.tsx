@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Flash } from "@/components/Flash";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import { getActiveOverview } from "@/lib/overview";
 import { formatDate, formatRupiah } from "@/lib/utils";
 
@@ -13,9 +13,10 @@ type EndedLease = {
 
 export default async function TenantsPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const supabase = await getSupabase();
 
-  const [overview, endedRes] = await Promise.all([
+  const [, overview, endedRes] = await Promise.all([
+    requireAdmin(),
     getActiveOverview(supabase),
     supabase
       .from("leases")

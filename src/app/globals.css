@@ -107,6 +107,16 @@
   .btn-danger:hover:not(:disabled) {
     background: var(--color-bata-soft);
   }
+  /* Tombol sekunder di atas latar hijau tua */
+  .btn-light {
+    background: transparent;
+    border-color: rgb(255 255 255 / 0.45);
+    color: #fff;
+  }
+  .btn-light:hover:not(:disabled) {
+    border-color: #fff;
+    background: rgb(255 255 255 / 0.08);
+  }
   .btn-sm {
     min-height: 2.5rem;
     padding: 0 0.9rem;
@@ -202,6 +212,23 @@
     border-color: var(--color-batu);
     color: #8a968f;
     border-style: dashed;
+  }
+
+  /* Galeri foto: geser samping, berhenti di tiap foto */
+  .gallery {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gallery::-webkit-scrollbar {
+    display: none;
+  }
+  .gallery > * {
+    scroll-snap-align: center;
+    flex: 0 0 auto;
   }
 
   .card {

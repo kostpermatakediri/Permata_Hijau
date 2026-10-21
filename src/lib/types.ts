@@ -4,6 +4,8 @@ export type Unit = {
   address: string | null;
   description: string | null;
   photo_url: string | null;
+  /** Galeri foto (URL publik). Kosong kalau migrasi 20261021 belum dijalankan. */
+  photos?: string[];
   sort_order: number;
 };
 

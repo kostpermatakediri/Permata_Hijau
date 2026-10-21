@@ -11,13 +11,13 @@ export const metadata: Metadata = { title: "Masuk pengelola", robots: { index: f
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
 
-  // Kalau sudah login sebagai admin, langsung ke dashboard.
+  // Kalau sudah login sebagai admin, langsung ke dashboard. Belum login (kasus umum): tanpa
+  // query apa pun, karena token diverifikasi lokal.
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) {
-    const { data: admin } = await supabase.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (userId) {
+    const { data: admin } = await supabase.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
     if (admin) redirect("/admin");
   }
 

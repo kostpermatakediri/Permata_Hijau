@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Refresh sesi Supabase di tiap request /admin dan kunci halaman admin dari yang belum login. */
+/**
+ * Refresh sesi Supabase di tiap request /admin dan kunci halaman admin dari yang belum login.
+ *
+ * Pakai getClaims() (bukan getUser()): tanda tangan token diverifikasi langsung di server
+ * dengan kunci publik yang di-cache, jadi tidak ada bolak-balik ke Supabase di tiap request.
+ * Token tetap divalidasi dan di-refresh kalau hampir kedaluwarsa.
+ */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -22,12 +28,9 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // getUser() memvalidasi token ke Supabase Auth (bukan sekadar baca cookie).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
-  if (!user && request.nextUrl.pathname.startsWith("/admin")) {
+  if (!data?.claims && request.nextUrl.pathname.startsWith("/admin")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

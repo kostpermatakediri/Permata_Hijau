@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { Flash } from "@/components/Flash";
 import { LeaseRow, dueNote } from "@/components/LeaseRow";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import { daysUntil } from "@/lib/billing";
 import { getActiveOverview } from "@/lib/overview";
 import { formatDate, formatRupiah, todayWIB } from "@/lib/utils";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const supabase = await getSupabase();
   const today = todayWIB();
 
-  const [overview, roomsRes] = await Promise.all([
+  const [, overview, roomsRes] = await Promise.all([
+    requireAdmin(),
     getActiveOverview(supabase),
     supabase.from("rooms").select("id", { count: "exact", head: true }).eq("is_active", true),
   ]);

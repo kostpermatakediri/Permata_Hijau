@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { CopyButton } from "@/components/CopyButton";
 import { Flash } from "@/components/Flash";
 import { SubmitButton } from "@/components/SubmitButton";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import { summarize, type ChargeRow } from "@/lib/billing";
 import { config } from "@/lib/config";
 import { payLink, payLinkMessage, reminderMessage } from "@/lib/messages";
@@ -32,21 +32,22 @@ export default async function LeaseDetailPage({
 }) {
   const { id } = await params;
   const { ok, error } = await searchParams;
-  const { supabase } = await requireAdmin();
+  const supabase = await getSupabase();
   const today = todayWIB();
 
-  const { data } = await supabase
-    .from("leases")
-    .select("*, tenants(full_name, phone), rooms(name, units(name))")
-    .eq("id", id)
-    .maybeSingle();
-  if (!data) notFound();
-  const lease = data as LeaseJoin;
-
-  const [chargesRes, paymentsRes] = await Promise.all([
+  // Semua query paralel: tagihan dan pembayaran tidak perlu menunggu data sewa selesai.
+  const [, leaseRes, chargesRes, paymentsRes] = await Promise.all([
+    requireAdmin(),
+    supabase
+      .from("leases")
+      .select("*, tenants(full_name, phone), rooms(name, units(name))")
+      .eq("id", id)
+      .maybeSingle(),
     supabase.from("charges").select("*").eq("lease_id", id),
     supabase.from("payments").select("*").eq("lease_id", id).order("created_at", { ascending: false }),
   ]);
+  if (!leaseRes.data) notFound();
+  const lease = leaseRes.data as LeaseJoin;
   const charges = (chargesRes.data ?? []) as ChargeRow[];
   const payments = (paymentsRes.data ?? []) as Payment[];
 

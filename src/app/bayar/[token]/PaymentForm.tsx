@@ -1,26 +1,10 @@
 "use client";
 
 import { useActionState, useRef, useState, startTransition } from "react";
+import { compressImage } from "@/lib/image-client";
 import { submitPayment, type PayState } from "./actions";
 
-const MAX_SIDE = 1600;
 const MAX_BYTES = 3 * 1024 * 1024;
-
-/** Perkecil foto dari HP (sering 3-8 MB) jadi ~300 KB sebelum diunggah. */
-async function compress(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.8));
-    return blob ? new File([blob], "bukti.jpg", { type: "image/jpeg" }) : file;
-  } catch {
-    return file;
-  }
-}
 
 export function PaymentForm({ token, defaultAmount }: { token: string; defaultAmount: number }) {
   const [state, formAction, pending] = useActionState<PayState, FormData>(submitPayment, { status: "idle", message: "" });
@@ -41,7 +25,7 @@ export function PaymentForm({ token, defaultAmount }: { token: string; defaultAm
     }
 
     setPreparing(true);
-    const small = await compress(raw);
+    const small = await compressImage(raw, 1600, 0.8);
     setPreparing(false);
     if (small.size > MAX_BYTES) {
       setLocalError("Foto terlalu besar. Coba screenshot bukti transfernya saja.");

@@ -22,26 +22,27 @@ type LeaseJoin = Lease & {
   rooms: { name: string; units: { name: string } | null } | null;
 };
 
-/** Ringkasan semua sewa aktif: tunggakan, pembayaran menunggu, jatuh tempo, dst. */
+/**
+ * Ringkasan semua sewa aktif: tunggakan, pembayaran menunggu, jatuh tempo, dst.
+ * Tiga query jalan paralel (satu kali bolak-balik): tagihan dan pembayaran difilter
+ * lewat relasi ke sewa aktif, bukan menunggu daftar sewa selesai diambil dulu.
+ */
 export async function getActiveOverview(supabase: SupabaseClient): Promise<LeaseOverview[]> {
   const today = todayWIB();
 
-  const { data: leases } = await supabase
-    .from("leases")
-    .select("*, tenants(full_name, phone), rooms(name, units(name))")
-    .eq("status", "active");
-
-  const rows = (leases ?? []) as LeaseJoin[];
-  if (rows.length === 0) return [];
-  const ids = rows.map((l) => l.id);
-
-  const [chargesRes, paymentsRes] = await Promise.all([
-    supabase.from("charges").select("*").in("lease_id", ids),
-    supabase.from("payments").select("lease_id, amount, status").in("lease_id", ids).in("status", ["approved", "pending"]),
+  const [leasesRes, chargesRes, paymentsRes] = await Promise.all([
+    supabase.from("leases").select("*, tenants(full_name, phone), rooms(name, units(name))").eq("status", "active"),
+    supabase.from("charges").select("*, leases!inner(status)").eq("leases.status", "active"),
+    supabase
+      .from("payments")
+      .select("lease_id, amount, status, leases!inner(status)")
+      .eq("leases.status", "active")
+      .in("status", ["approved", "pending"]),
   ]);
 
-  const charges = (chargesRes.data ?? []) as ChargeRow[];
-  const payments = (paymentsRes.data ?? []) as { lease_id: string; amount: number; status: string }[];
+  const rows = (leasesRes.data ?? []) as LeaseJoin[];
+  const charges = (chargesRes.data ?? []) as unknown as ChargeRow[];
+  const payments = (paymentsRes.data ?? []) as unknown as { lease_id: string; amount: number; status: string }[];
 
   return rows
     .map((l) => {

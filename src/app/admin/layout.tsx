@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { logout } from "@/app/login/actions";
 import { AdminNav } from "@/components/AdminNav";
-import { requireAdmin } from "@/lib/auth";
+import { getSupabase, requireAdmin } from "@/lib/auth";
 import { config } from "@/lib/config";
 
 export const metadata: Metadata = { title: "Pengelola", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { supabase } = await requireAdmin();
-
-  const { count } = await supabase.from("payments").select("id", { count: "exact", head: true }).eq("status", "pending");
+  // Cek admin dan hitung bukti bayar berjalan bareng (RLS tetap membatasi hasil query).
+  const supabase = await getSupabase();
+  const [, { count }] = await Promise.all([
+    requireAdmin(),
+    supabase.from("payments").select("id", { count: "exact", head: true }).eq("status", "pending"),
+  ]);
 
   return (
     <div className="pb-28">
