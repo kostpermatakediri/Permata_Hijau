@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   experimental: {
     // Bukti bayar dikompres di sisi klien (~300KB), tapi kasih ruang aman.
     serverActions: { bodySizeLimit: "4mb" },
+    // Halaman admin yang baru dibuka dipakai ulang 30 detik di sisi klien, jadi bolak-balik antar menu
+    // tidak menunggu server. Server action memanggil revalidatePath, yang mengosongkan cache ini.
+    staleTimes: { dynamic: 30 },
   },
   images: {
     remotePatterns: supabaseHost
